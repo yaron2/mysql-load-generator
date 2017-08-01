@@ -1,0 +1,9 @@
+{
+    "connectionString": "USER:PASSWORD@tcp(HOST:PORT)/DB",
+    "requestsPerSecond": 1,
+    "printLogs": true,
+    "timeToRun": 3,
+    "queries" : [
+        "SELECT * from Table"
+    ]
+}
