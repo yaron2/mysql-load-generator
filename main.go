@@ -14,11 +14,11 @@ import (
 )
 
 type Config struct {
-	RequestsPerSecond int      `json:"requestsPerSecond"`
-	Queries           []string `json:"queries"`
-	ConnectionString  string   `json:"connectionString"`
-	PrintLogs         bool     `json:"printLogs"`
-	TimeToRun         int      `json:"timeToRun"`
+	RequestsPerSecond  int      `json:"requestsPerSecond"`
+	Queries            []string `json:"queries"`
+	ConnectionString   string   `json:"connectionString"`
+	PrintLogs          bool     `json:"printLogs"`
+	TimeToRunInSeconds int      `json:"timeToRunInSeconds"`
 }
 
 var config Config
@@ -91,8 +91,10 @@ func displayAverageQueryTime() {
 }
 
 func dispatchQueries() {
+	fmt.Println("Starting run")
+
 	start := time.Now()
-	shouldEnd := start.Add(time.Second * time.Duration(config.TimeToRun))
+	shouldEnd := start.Add(time.Second * time.Duration(config.TimeToRunInSeconds))
 
 	for time.Now().Before(shouldEnd) {
 		for i := 0; i < config.RequestsPerSecond; i++ {
