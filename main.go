@@ -84,9 +84,10 @@ func displayAverageQueryTime() {
 		}
 
 		var count = len(queryTimesInMS)
-		sum := totalvalues / count
-
-		fmt.Println("Average time: " + strconv.Itoa(sum) + "ms")
+		if count != 0{
+			sum := totalvalues / count
+			fmt.Println("Average time: " + strconv.Itoa(sum) + "ms")
+		}
 	}
 }
 
