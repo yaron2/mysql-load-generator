@@ -1,12 +1,10 @@
-FROM golang:1.9  AS builder
+FROM golang:1.9-alpine
 
 RUN mkdir /app
 ADD . /app/
 WORKDIR /app
+RUN apk add git bash
 RUN go get github.com/go-sql-driver/mysql
 RUN go build -o main .
 
-FROM alpine:3.10
-
-COPY --from=builder /app/main /usr/bin/mysql-load-generator
-CMD ["/usr/bin/mysql-load-generator"]
+CMD ["/app/entrypoint.sh"]
