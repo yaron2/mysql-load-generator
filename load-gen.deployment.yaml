@@ -1,0 +1,50 @@
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: loadgen
+  labels:
+    app: loadgen
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0%
+      maxSurge: 66%
+  revisionHistoryLimit: 5
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loadgen
+  template:
+    metadata:
+      labels:
+        app: loadgen
+    spec:
+      containers:
+      - image: lvejm/mysql-load-generator
+        name: loadgen
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: 200m
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 75Mi
+        env:
+          - name: lg_USER
+            value: maxscale1
+          - name: lg_PASSWORD
+            value: maxscaledemo1
+          - name: lg_HOST
+            value: maxscale.maxscale.svc.cluster.local
+          - name: lg_DB
+            value: employees
+          - name: lg_RPS
+            value: "2"
+          - name: lg_TTR
+            value: "90"
+          - name: lg_QUERY
+            value: "select emp.emp_no, emp.first_name, emp.last_name, sal.salary, sal.from_date from employees emp inner join (select emp_no, MAX(salary) as salary, from_date from salaries group by emp_no) sal on (emp.emp_no = sal.emp_no) LIMIT 50;"
+
