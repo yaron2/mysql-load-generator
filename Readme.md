@@ -1,7 +1,6 @@
 # MemSQL / MySQL Load Tester
 
 This is a tool for generating load tests based on custom queries for MemSQL / MySQL databases.
-This fork brings substitution, query timeouts, wait group timeout, connection pool, periodic qps and latency logs, higher performance
 
 ## How does it work?
 
