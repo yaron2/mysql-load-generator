@@ -74,7 +74,11 @@ func printQps() {
 		atomic.StoreInt64(&ops, 0)
 		loadedLatency := atomic.LoadInt64(&latency)
 		atomic.StoreInt64(&latency, 0)
-		fmt.Println("qps: ", loadedOps/5, ", average latency: ", time.Duration(loadedLatency/loadedOps))
+        if loadedOps != 0 {
+		    fmt.Println("qps: ", loadedOps/5, ", average latency: ", time.Duration(loadedLatency/loadedOps))
+        } else {
+            fmt.Println("qps: ", loadedOps/5)
+        }
 
 	}
 
