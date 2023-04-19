@@ -19,6 +19,20 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func RandStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
 type Substitution struct {
 	Key string `json:"key"`
 	Min int    `json:"min"`
@@ -36,6 +50,7 @@ type Config struct {
 	QueryTimeout       int            `json:"queryTimeout"`
 	ConnectionLifetime time.Duration  `json:"connectionLifeTime"`
 	Substitution       []Substitution `json:"substitution"`
+	Transactions       bool           `json:"transactions"`
 }
 
 var config = Config{
@@ -49,10 +64,10 @@ var config = Config{
 	QueryTimeout:       10,
 	ConnectionLifetime: 0,
 	Substitution:       []Substitution{},
+	Transactions:       false,
 }
 var configFilePath string
 var db *sql.DB
-var queryTimesInMS []int
 var ops int64 = 0
 var latency int64 = 0
 
@@ -74,11 +89,11 @@ func printQps() {
 		atomic.StoreInt64(&ops, 0)
 		loadedLatency := atomic.LoadInt64(&latency)
 		atomic.StoreInt64(&latency, 0)
-        if loadedOps != 0 {
-		    fmt.Println("qps: ", loadedOps/5, ", average latency: ", time.Duration(loadedLatency/loadedOps))
-        } else {
-            fmt.Println("qps: ", loadedOps/5)
-        }
+		if loadedOps != 0 {
+			fmt.Println("qps: ", loadedOps/5, ", average latency: ", time.Duration(loadedLatency/loadedOps))
+		} else {
+			fmt.Println("qps: ", loadedOps/5)
+		}
 
 	}
 
@@ -124,20 +139,40 @@ func executeQuery(query string) {
 	defer cancel()
 
 	for _, subs := range config.Substitution {
-		query = strings.Replace(query, subs.Key, strconv.Itoa(rand.Intn(subs.Max-subs.Min)+subs.Min), 1)
+		if strings.Contains(subs.Key, "string") {
+			query = strings.Replace(query, subs.Key, RandStringRunes(rand.Intn(subs.Max-subs.Min)+subs.Min), 1)
+		} else {
+			query = strings.Replace(query, subs.Key, strconv.Itoa(rand.Intn(subs.Max-subs.Min)+subs.Min), 1)
+		}
 	}
 
 	if config.PrintLogs {
 		fmt.Println("Executed ", query)
 	}
-	if config.DryRun == false {
+	if !config.DryRun {
 		start := time.Now()
-		_, err := db.ExecContext(ctx, query)
-		if err == nil {
+		if config.Transactions {
+			tx, err := db.BeginTx(ctx, nil)
+			if err != nil {
+				return
+			}
+			defer tx.Rollback()
+			_, err = tx.ExecContext(ctx, query)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "query err: %s\n", err.Error())
+			}
+			if err = tx.Commit(); err != nil {
+				fmt.Fprintf(os.Stderr, "commit err: %s\n", err.Error())
+			}
 			atomic.AddInt64(&ops, 1)
 			atomic.AddInt64(&latency, int64(time.Since(start)))
 		} else {
-			fmt.Fprintf(os.Stderr, "query err: %s\n", err.Error())
+			_, err := db.ExecContext(ctx, query)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "query err: %s\n", err.Error())
+			}
+			atomic.AddInt64(&ops, 1)
+			atomic.AddInt64(&latency, int64(time.Since(start)))
 		}
 	}
 }
